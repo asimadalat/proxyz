@@ -1,7 +1,7 @@
 use phf::phf_map;
 use std::iter::Iterator;
 
-use crate::Proxyz;
+use crate::driver::Proxyz;
 use crate::lexer::{TokenType, Literal, Token};
 
 static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
