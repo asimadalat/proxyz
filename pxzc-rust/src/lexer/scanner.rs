@@ -36,16 +36,16 @@ pub fn parse_keyword(keyword: &str) -> Option<TokenType> {
     KEYWORDS.get(keyword).cloned()
 }
 
-pub struct Scanner {
+pub struct Scanner<'a> {
     tokens: Vec<Token>,
     start: usize,
     position: usize,
     line: usize,
-    source: String,
+    source: &'a str,
 }
 
-impl Scanner {
-    pub fn new(source: String) -> Scanner {
+impl Scanner<'_> {
+    pub fn new(source: &'_ str) -> Scanner<'_> {
         Scanner {
             tokens: Vec::new(),
             start: 0,

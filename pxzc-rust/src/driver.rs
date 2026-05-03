@@ -24,17 +24,8 @@ impl Proxyz {
     }
 
     fn run_file(path: &String) -> io::Result<()> {
-        let f = fs::File::open(path)?;
-        let mut reader = io::BufReader::new(f);
-        let mut buffer = Vec::new();
+        let s = fs::read_to_string(&path)?;
 
-        reader
-            .read_to_end(&mut buffer)
-            .expect("Could not read file bytes");
-
-        let s = String::from_utf8(buffer).expect("Could not convert buffer to UTF-8");
-
-        println!("File content: {}", s);
         Proxyz::run(&s);
         if HAD_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
             process::exit(1)
@@ -61,8 +52,8 @@ impl Proxyz {
         }
     }
 
-    fn run(source: &String) {
-        let mut scanner = Scanner::new(source.clone());
+    fn run(source: &str) {
+        let mut scanner = Scanner::new(source);
         let tokens: &Vec<Token> = scanner.scan_tokens();
 
         for token in tokens {
