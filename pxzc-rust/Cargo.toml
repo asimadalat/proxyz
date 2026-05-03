@@ -1,0 +1,11 @@
+[package]
+name = "pxzc"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "pxzc"
+path = "src/main.rs"
+
+[dependencies]
+phf = { version = "0.13.1", features = ["macros"] }
