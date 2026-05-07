@@ -1,5 +1,6 @@
 mod lexer;
 mod driver;
+mod expression;
 
 use std::env;
 
