@@ -1,6 +1,6 @@
 mod lexer;
 mod driver;
-mod expression;
+mod parser;
 
 use std::env;
 
