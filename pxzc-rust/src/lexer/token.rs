@@ -1,3 +1,5 @@
+use std::fmt;
+use std::fmt::Formatter;
 use crate::lexer::{TokenType, Literal};
 
 #[derive(Debug)]
@@ -16,5 +18,13 @@ impl Token {
             line,
             literal,
         }
+    }
+
+    pub fn lexeme(&self) -> &str { &self.lexeme }
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.lexeme)
     }
 }
