@@ -5,17 +5,16 @@ use crate::driver::Proxyz;
 use crate::lexer::{TokenType, Literal, Token};
 
 static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
+    "true" => TokenType::True,
+    "false" => TokenType::False,
+    "null" => TokenType::Null,
     "let" => TokenType::Let,
+    "final" => TokenType::Final,
     "struct" => TokenType::Struct,
-    "extend" => TokenType::Extend,
-    "unsafe" => TokenType::Unsafe,
-    "module" => TokenType::Module,
-    "import" => TokenType::Import,
-    "export" => TokenType::Export,
-    "fn" => TokenType::Fn,
+    "proc" => TokenType::Proc,
     "as" => TokenType::As,
+    "is" => TokenType::Is,
     "if" => TokenType::If,
-    "elif" => TokenType::Elif,
     "else" => TokenType::Else,
     "for" => TokenType::For,
     "while" => TokenType::While,
@@ -23,13 +22,10 @@ static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
     "return" => TokenType::Return,
     "and" => TokenType::And,
     "or" => TokenType::Or,
-    "not" => TokenType::Not,
-    "is" => TokenType::Is,
-    "take" => TokenType::Take,
-    "lent" => TokenType::Lent,
-    "consume" => TokenType::Consume,
-    "true" => TokenType::True,
-    "false" => TokenType::False
+    "unsafe" => TokenType::Unsafe,
+    "module" => TokenType::Module,
+    "import" => TokenType::Import,
+    "export" => TokenType::Export
 };
 
 pub fn parse_keyword(keyword: &str) -> Option<TokenType> {
@@ -74,68 +70,71 @@ impl Scanner<'_> {
     fn scan_token(&mut self) {
         let c: char = self.proceed();
         match c {
-            '(' => self.add_token(TokenType::OpenBracket),
-            ')' => self.add_token(TokenType::CloseBracket),
-            '{' => self.add_token(TokenType::OpenBrace),
-            '}' => self.add_token(TokenType::CloseBrace),
+            '(' => self.add_token(TokenType::LeftParen),
+            ')' => self.add_token(TokenType::RightParen),
+            '[' => self.add_token(TokenType::LeftBracket),
+            ']' => self.add_token(TokenType::RightBracket),
+            '{' => self.add_token(TokenType::LeftBrace),
+            '}' => self.add_token(TokenType::RightBrace),
             ',' => self.add_token(TokenType::Comma),
-            '?' => self.add_token(TokenType::Question),
             ':' => self.add_token(TokenType::Colon),
+            '?' => {
+                let token_type = if (&mut *self).then('?') {
+                    TokenType::QuestionQuestion
+                } else if (&mut *self).then('=') {
+                    TokenType::QuestionEqual
+                } else { TokenType::Question };
+                (&mut *self).add_token(token_type);
+            }
             '.' => {
                 let token_type = if self.then('.') {
                     TokenType::DotDot
-                } else {
-                    TokenType::Dot
-                };
+                } else { TokenType::Dot };
                 self.add_token(token_type);
             }
             '-' => {
                 let token_type = if self.then('=') {
                     TokenType::MinusEqual
-                } else {
-                    TokenType::Minus
-                };
+                } else { TokenType::Minus };
                 self.add_token(token_type);
             }
             '+' => {
                 let token_type = if self.then('=') {
                     TokenType::PlusEqual
-                } else {
-                    TokenType::Plus
-                };
+                } else { TokenType::Plus };
                 self.add_token(token_type);
             }
             '*' => {
                 let token_type = if self.then('=') {
                     TokenType::StarEqual
-                } else {
-                    TokenType::Star
-                };
+                } else { TokenType::Star };
                 self.add_token(token_type);
             }
             '=' => {
-                let token_type = if self.then('>') {
+                let token_type = if (&mut *self).then('=') {
+                    TokenType::EqualEqual
+                } else if (&mut *self).then('>') {
                     TokenType::FatArrow
-                } else {
-                    TokenType::Equal
-                };
+                } else { TokenType::Equal };
                 self.add_token(token_type);
             }
             '>' => {
                 let token_type = if self.then('=') {
                     TokenType::GreaterEqual
-                } else {
-                    TokenType::Greater
-                };
+                } else { TokenType::Greater };
                 self.add_token(token_type);
             }
             '<' => {
                 let token_type = if self.then('=') {
                     TokenType::LessEqual
-                } else {
-                    TokenType::Less
-                };
+                } else { TokenType::Less };
                 self.add_token(token_type);
+            }
+            '!' => {
+                let token_type = if (&mut *self).then('=') {
+                    TokenType::ExclamationEqual
+                } else { TokenType::Exclamation };
+                (&mut *self).add_token(token_type);
             }
             '/' => {
                 if self.then('/') {

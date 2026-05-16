@@ -3,32 +3,36 @@ pub enum TokenType {
     // Literals
     Number,
     String,
+    Null,
+    True,
+    False,
     Identifier,
 
-    // Indentation
-    Indent,
-    Dedent,
-
-    // Single-character generics
-    OpenBracket,
-    CloseBracket,
-    OpenBrace,
-    CloseBrace,
+    // Structural Symbols
+    LeftParen,          // (
+    RightParen,         // )
+    LeftBracket,        // [
+    RightBracket,       // [
+    LeftBrace,          // {
+    RightBrace,         // }
     Dot,
     Comma,
     Colon,
     Question,
+
+    // Mathematical Operators
     Plus,
     Minus,
     Star,
     Slash,
 
-    // Assignment operators
+    // Assignment Operators
     Equal,
     PlusEqual,
     MinusEqual,
     SlashEqual,
     StarEqual,
+    QuestionEqual,
 
     // Range & Comparison Operators
     DotDot,
@@ -36,35 +40,35 @@ pub enum TokenType {
     LessEqual,
     Greater,
     GreaterEqual,
+    EqualEqual,
+    ExclamationEqual,
+    Exclamation,
+    QuestionQuestion,
 
-    FatArrow,
+    FatArrow, // =>
 
     //  Reserved Keywords
     Let,
+    Final,
     Struct,
-    Extend,
-    Unsafe,
-    Module,
-    Import,
-    Export,
-    Fn,
+    Proc,
     As,
+    Is,
+
     If,
-    Elif,
     Else,
     For,
     While,
     In,
     Return,
+
     And,
     Or,
-    Not,
-    Is,
-    Take,
-    Lent,
-    Consume,
-    True,
-    False,
+
+    Unsafe,
+    Module,
+    Import,
+    Export,
 
     Eof,
 }
