@@ -1,19 +1,19 @@
-use crate::lexer::Token;
+use crate::lexer::{Literal, Token};
 
-pub enum Expr {
+pub enum Expr<'a> {
     Literal{
-        token: Token
+        value: &'a Literal<'a>
     },
     Grouped {
-        expression: Box<Expr>
+        expression: Box<Expr<'a>>
     },
     Unary {
-        operator: Token,
-        operand: Box<Expr>
+        operator: &'a Token<'a>,
+        operand: Box<Expr<'a>>
     },
     Binary {
-        left: Box<Expr>,
-        operator: Token,
-        right: Box<Expr>
+        left: Box<Expr<'a>>,
+        operator: &'a Token<'a>,
+        right: Box<Expr<'a>>
     }
 }

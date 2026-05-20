@@ -1,9 +1,7 @@
 use std::fs;
 use std::io;
-use std::io::Read;
 use std::process;
-
-use crate::lexer::{Scanner, Token};
+use crate::lexer::{Scanner, Token, TokenType};
 
 static HAD_ERROR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -63,8 +61,18 @@ impl Proxyz {
         println!("{}", source);
     }
 
-    pub fn exception(line: usize, message: &str) {
-        eprintln!("[line {line}] Exception: {message}");
-        HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+    pub fn error_at_line(line: u32, message: &str) { Self::report_error(line, "", message) }
+
+    pub fn error_at_token(token: &Token, message: &str) {
+        if token.variant == TokenType::Eof {
+            Self::report_error(token.line, " at end", message);
+        } else {
+            Self::report_error(token.line, &format!(" at '{}'", token.lexeme), message);
+        }
+    }
+
+    fn report_error(line: u32, r#where: &str, message: &str) {
+        eprintln!("[line {line}] Error {where} : {message}");
+        HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed)
     }
 }

@@ -1,7 +1,7 @@
 use phf::phf_map;
 use std::iter::Iterator;
 
-use crate::driver::Proxyz;
+use crate::proxyz::Proxyz;
 use crate::lexer::{TokenType, Literal, Token};
 
 static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
@@ -33,14 +33,14 @@ pub fn parse_keyword(keyword: &str) -> Option<TokenType> {
 }
 
 pub struct Scanner<'a> {
-    tokens: Vec<Token>,
+    tokens: Vec<Token<'a>>,
     start: usize,
     position: usize,
-    line: usize,
+    line: u32,
     source: &'a str,
 }
 
-impl Scanner<'_> {
+impl<'a> Scanner<'a> {
     pub fn new(source: &'_ str) -> Scanner<'_> {
         Scanner {
             tokens: Vec::new(),
@@ -59,7 +59,7 @@ impl Scanner<'_> {
 
         self.tokens.push(Token::new(
             TokenType::Eof,
-            "".to_string(),
+            "",
             self.line,
             Literal::None,
         ));
@@ -152,7 +152,7 @@ impl Scanner<'_> {
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             ' ' | '\r' | '\t' => { /* Ignore whitespace characters */ }
             '\n' => self.line += 1,
-            _ => Proxyz::exception(self.line, "Unexpected character."),
+            _ => Proxyz::error_at_line(self.line, "Unexpected character."),
         }
     }
 
@@ -176,12 +176,12 @@ impl Scanner<'_> {
         }
 
         if self.is_at_end() {
-            Proxyz::exception(self.line, "Unterminated string literal.");
+            Proxyz::error_at_line(self.line, "Unterminated string literal.");
             return;
         }
 
         self.proceed();
-        let raw_string = self.source[self.start + 1..self.position].to_string();
+        let raw_string = &self.source[self.start + 1..self.position];
 
         self.add_token_with_literal(TokenType::String, Literal::String(raw_string));
     }
@@ -249,9 +249,9 @@ impl Scanner<'_> {
         self.add_token_with_literal(variant, Literal::None);
     }
 
-    fn add_token_with_literal(&mut self, variant: TokenType, literal: Literal) {
-        let text = &self.source[self.start..self.position];
+    fn add_token_with_literal(&mut self, variant: TokenType, literal: Literal<'a>) {
+        let text: &'a str = &self.source[self.start..self.position];
         self.tokens
-            .push(Token::new(variant, text.to_string(), self.line, literal));
+            .push(Token::new(variant, text, self.line, literal));
     }
 }
