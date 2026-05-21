@@ -1,12 +1,14 @@
 mod lexer;
-mod driver;
+mod proxyz;
 mod parser;
+mod errors;
 
 use std::env;
 
-use crate::driver::Proxyz;
+use crate::proxyz::Proxyz;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    Proxyz::execute(args);
+    let mut proxyz = Proxyz::new();
+    proxyz.execute(args);
 }

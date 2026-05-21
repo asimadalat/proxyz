@@ -1,5 +1,6 @@
 use std::ops::Index;
-use crate::proxyz::Proxyz;
+
+use crate::errors::{ParseError, ParseResult};
 use crate::lexer::{Token, TokenKind};
 use crate::parser::expr::Expr;
 
@@ -16,16 +17,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Box<Expr<'a>>> {
-        match self.expression() {
-            Ok(expr) => Some(expr),
-            Err(ParseError) => None
-        }
+    pub fn parse(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
+        self.expression()
     }
 
-    fn expression(&mut self) -> ParseResult<Box<Expr<'a>>> { self.equality() }
+    fn expression(&mut self) -> ParseResult<'a, Box<Expr<'a>>> { self.equality() }
 
-    fn equality(&mut self) -> ParseResult<Box<Expr<'a>>> {
+    fn equality(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.comparison()?;
 
         while self.match_one(&[TokenKind::ExclamationEqual, TokenKind::EqualEqual]) {
@@ -42,7 +40,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> ParseResult<Box<Expr<'a>>> {
+    fn comparison(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.term()?;
 
         while self.match_one(&[
@@ -64,7 +62,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> ParseResult<Box<Expr<'a>>> {
+    fn unary(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         if self.match_one(&[TokenKind::Minus, TokenKind::Exclamation]) {
             let operator_idx: usize = self.previous_index();
             let right: Box<Expr<'a>> = self.unary()?;
@@ -78,7 +76,7 @@ impl<'a> Parser<'a> {
         self.primary()
     }
 
-    fn primary(&mut self) -> ParseResult<Box<Expr<'a>>>{
+    fn primary(&mut self) -> ParseResult<'a, Box<Expr<'a>>>{
         if self.match_one(&[
             TokenKind::False,
             TokenKind::True,
@@ -96,11 +94,13 @@ impl<'a> Parser<'a> {
             return Ok(Box::new(Expr::Grouped { expression }))
         }
 
-        self.error(self.peek(), "Expected expression.")?;
-        Err(ParseError)
+        Err(Self::error(
+            self.peek(),
+            "Expected expression."
+        ))
     }
 
-    fn term(&mut self) -> ParseResult<Box<Expr<'a>>> {
+    fn term(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>>= self.factor()?;
 
         while self.match_one(&[
@@ -121,7 +121,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> ParseResult<Box<Expr<'a>>> {
+    fn factor(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.unary()?;
 
         while self.match_one(&[TokenKind::Slash, TokenKind::Star]) {
@@ -150,13 +150,12 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn consume(&mut self, token_type: TokenKind, message: &str) -> ParseResult<&'a Token<'a>>{
+    fn consume(&mut self, token_type: TokenKind, message: &'static str) -> ParseResult<'a, &Token<'a>>{
         if self.check_if_type(&token_type) {
             return Ok(self.advance());
         }
 
-        self.error(self.peek(), message)?;
-        Err(ParseError)
+        Err(Self::error(self.peek(), message))
     }
 
     fn check_if_type(&self, kind: &TokenKind) -> bool {
@@ -164,7 +163,7 @@ impl<'a> Parser<'a> {
         self.peek().kind == *kind
     }
 
-    fn advance(&mut self) -> &'a Token<'a> {
+    fn advance(&mut self) -> &Token<'a> {
         if !self.is_at_end() { self.current += 1 }
         self.previous()
     }
@@ -175,11 +174,10 @@ impl<'a> Parser<'a> {
 
     fn previous_index(&self) -> usize { self.current - 1 }
 
-    fn previous(&self) -> &'a Token<'a> { self.tokens.index(self.current - 1) }
+    fn previous(&self) -> &Token<'a> { self.tokens.index(self.current - 1) }
 
-    fn error(&self, token: &Token, message: &str) -> ParseResult<()> {
-        Proxyz::error_at_token(token, message);
-        Err(ParseError)
+    fn error(token: &'a Token<'a>, message: &'static str) -> ParseError<'a> {
+        ParseError { token, message }
     }
 
     fn synchronise(&mut self) {
@@ -210,7 +208,3 @@ impl<'a> Parser<'a> {
         }
     }
 }
-
-#[derive(Debug)]
-struct ParseError;
-type ParseResult<T> = Result<T, ParseError>;

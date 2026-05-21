@@ -1,7 +1,6 @@
 use phf::phf_map;
-use std::iter::Iterator;
 
-use crate::proxyz::Proxyz;
+use crate::errors::{ScanError, ScanResult};
 use crate::lexer::{TokenKind, Literal, Token};
 
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
@@ -53,10 +52,10 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub(crate) fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub(crate) fn scan_tokens(&mut self) -> ScanResult<'a> {
         while !self.is_at_end() {
             self.start = self.position;
-            self.scan_token();
+            self.scan_token()?;
         }
 
         self.tokens.push(Token::new(
@@ -66,10 +65,12 @@ impl<'a> Scanner<'a> {
             Literal::None,
         ));
 
-        &self.tokens
+        let scanned_tokens = std::mem::take(&mut self.tokens);
+
+        Ok(scanned_tokens)
     }
 
-    fn scan_token(&mut self) {
+    fn scan_token(&mut self) -> ScanResult<'a, ()> {
         let c: char = self.proceed();
         match c {
             '(' => self.add_token(TokenKind::LeftParen),
@@ -149,7 +150,7 @@ impl<'a> Scanner<'a> {
                     self.add_token(TokenKind::Slash)
                 }
             }
-            '"' => self.string(),
+            '"' => self.string()?,
             '0'..='9' => self.number(),
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             ' ' | '\r' | '\t' => { /* Ignore whitespace characters */ }
@@ -168,8 +169,13 @@ impl<'a> Scanner<'a> {
                     _ => { }
                 }
             },
-            _ => Proxyz::error_at_line(self.line, "Unexpected character."),
+            _ => return Err(ScanError {
+                line: self.line,
+                message: "Unexpected character.",
+            })
         }
+
+        Ok(())
     }
 
     fn identifier(&mut self) {
@@ -183,7 +189,7 @@ impl<'a> Scanner<'a> {
         self.add_token(token_type);
     }
 
-    fn string(&mut self) {
+    fn string(&mut self) -> ScanResult<'a, ()> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1
@@ -192,14 +198,18 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            Proxyz::error_at_line(self.line, "Unterminated string literal.");
-            return;
+            return Err(ScanError {
+                line: self.line,
+                message: "Unterminated string literal.",
+            });
         }
 
         self.proceed();
         let raw_string = &self.source[self.start + 1..self.position];
 
         self.add_token_with_literal(TokenKind::String, Literal::String(raw_string));
+
+        Ok(())
     }
 
     fn number(&mut self) {

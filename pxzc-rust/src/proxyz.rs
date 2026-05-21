@@ -5,36 +5,40 @@ use crate::lexer::{Scanner, Token, TokenKind};
 use crate::parser;
 use crate::parser::core::Parser;
 
-static HAD_ERROR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-pub struct Proxyz;
+pub struct Proxyz {
+    had_error: bool,
+}
 
 impl Proxyz {
-    pub fn execute(args: Vec<String>) {
+    pub fn new() -> Proxyz {
+        Proxyz { had_error: false }
+    }
+
+    pub fn execute(&mut self, args: Vec<String>) {
         let num_args: u8 = args.len() as u8;
 
         if num_args > 2 {
             println!("Usage: pxzc [script]");
             process::exit(1);
         } else if num_args == 2 {
-            Proxyz::run_file(&args[1]).expect("Could not run Proxyz script");
+            self.run_file(&args[1]).expect("Could not run Proxyz script");
         } else {
-            Proxyz::run_prompt();
+            self.run_prompt();
         }
     }
 
-    fn run_file(path: &String) -> io::Result<()> {
+    fn run_file(&mut self, path: &String) -> io::Result<()> {
         let s = fs::read_to_string(&path)?;
 
-        Proxyz::run(&s);
-        if HAD_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
+        self.run(&s);
+        if self.had_error {
             process::exit(1)
         }
 
         Ok(())
     }
 
-    fn run_prompt() {
+    fn run_prompt(&mut self) {
         let input = io::stdin();
         let mut buffer = String::new();
         loop {
@@ -43,41 +47,54 @@ impl Proxyz {
             match line {
                 Ok(0) => break,
                 Ok(_) => {
-                    Proxyz::run(&buffer);
+                    self.run(&buffer);
                     buffer.clear();
-                    HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+                    self.had_error = true;
                 }
                 Err(ex) => eprintln!("error: {ex}"),
             }
         }
     }
 
-    fn run(source: &str) {
+    fn run(&mut self, source: &str) {
         let mut scanner = Scanner::new(source);
-        let tokens: &Vec<Token> = scanner.scan_tokens();
 
-        let mut parser = Parser::new(tokens);
+        match scanner.scan_tokens() {
+            Ok(tokens) => {
+                let mut parser = Parser::new(&tokens);
 
-        match parser.parse() {
-            Some(expression) => {
-                println!("{}", parser::ast_printer::print(&expression));
+                match parser.parse() {
+                    Ok(ast) => {
+                        println!("{}", parser::ast_printer::print(&ast));
+                    }
+                    Err(parse_error) => { 
+                        self.error_at_token(
+                            parse_error.token, 
+                            parse_error.message
+                        )
+                    }
+                }
             }
-            None => { }
+            Err(scan_error) => {
+                self.error_at_line(scan_error.line, scan_error.message)
+            }
         }
     }
 
-    pub fn error_at_line(line: u32, message: &str) { Self::report_error(line, "", message) }
+    fn error_at_line(&mut self, line: u32, message: &str) {
+        self.report_error(line, "", message)
+    }
 
-    pub fn error_at_token(token: &Token, message: &str) {
+    fn error_at_token(&mut self, token: &Token, message: &str) {
         if token.kind == TokenKind::Eof {
-            Self::report_error(token.line, " at end", message);
+            self.report_error(token.line, " at end", message);
         } else {
-            Self::report_error(token.line, &format!(" at '{}'", token.lexeme), message);
+            self.report_error(token.line, &format!(" at '{}'", token.lexeme), message);
         }
     }
 
-    fn report_error(line: u32, r#where: &str, message: &str) {
+    fn report_error(&mut self, line: u32, r#where: &str, message: &str) {
         eprintln!("[line {line}] Error {where} : {message}");
-        HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed)
+        self.had_error = true;
     }
 }
