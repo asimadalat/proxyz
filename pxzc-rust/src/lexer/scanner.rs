@@ -2,33 +2,33 @@ use phf::phf_map;
 use std::iter::Iterator;
 
 use crate::proxyz::Proxyz;
-use crate::lexer::{TokenType, Literal, Token};
+use crate::lexer::{TokenKind, Literal, Token};
 
-static KEYWORDS: phf::Map<&'static str, TokenType> = phf_map! {
-    "true" => TokenType::True,
-    "false" => TokenType::False,
-    "null" => TokenType::Null,
-    "let" => TokenType::Let,
-    "final" => TokenType::Final,
-    "struct" => TokenType::Struct,
-    "proc" => TokenType::Proc,
-    "as" => TokenType::As,
-    "is" => TokenType::Is,
-    "if" => TokenType::If,
-    "else" => TokenType::Else,
-    "for" => TokenType::For,
-    "while" => TokenType::While,
-    "in" => TokenType::In,
-    "return" => TokenType::Return,
-    "and" => TokenType::And,
-    "or" => TokenType::Or,
-    "unsafe" => TokenType::Unsafe,
-    "module" => TokenType::Module,
-    "import" => TokenType::Import,
-    "export" => TokenType::Export
+static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
+    "true" => TokenKind::True,
+    "false" => TokenKind::False,
+    "null" => TokenKind::Null,
+    "val" => TokenKind::Val,
+    "var" => TokenKind::Var,
+    "struct" => TokenKind::Struct,
+    "proc" => TokenKind::Proc,
+    "as" => TokenKind::As,
+    "is" => TokenKind::Is,
+    "if" => TokenKind::If,
+    "else" => TokenKind::Else,
+    "for" => TokenKind::For,
+    "while" => TokenKind::While,
+    "in" => TokenKind::In,
+    "return" => TokenKind::Return,
+    "and" => TokenKind::And,
+    "or" => TokenKind::Or,
+    "unsafe" => TokenKind::Unsafe,
+    "module" => TokenKind::Module,
+    "import" => TokenKind::Import,
+    "export" => TokenKind::Export
 };
 
-pub fn parse_keyword(keyword: &str) -> Option<TokenType> {
+pub fn parse_keyword(keyword: &str) -> Option<TokenKind> {
     KEYWORDS.get(keyword).cloned()
 }
 
@@ -37,6 +37,7 @@ pub struct Scanner<'a> {
     start: usize,
     position: usize,
     line: u32,
+    prev_token_type: Option<TokenKind>,
     source: &'a str,
 }
 
@@ -47,6 +48,7 @@ impl<'a> Scanner<'a> {
             start: 0,
             position: 0,
             line: 1,
+            prev_token_type: None,
             source,
         }
     }
@@ -58,7 +60,7 @@ impl<'a> Scanner<'a> {
         }
 
         self.tokens.push(Token::new(
-            TokenType::Eof,
+            TokenKind::Eof,
             "",
             self.line,
             Literal::None,
@@ -70,70 +72,70 @@ impl<'a> Scanner<'a> {
     fn scan_token(&mut self) {
         let c: char = self.proceed();
         match c {
-            '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(TokenType::RightParen),
-            '[' => self.add_token(TokenType::LeftBracket),
-            ']' => self.add_token(TokenType::RightBracket),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            ':' => self.add_token(TokenType::Colon),
+            '(' => self.add_token(TokenKind::LeftParen),
+            ')' => self.add_token(TokenKind::RightParen),
+            '[' => self.add_token(TokenKind::LeftBracket),
+            ']' => self.add_token(TokenKind::RightBracket),
+            '{' => self.add_token(TokenKind::LeftBrace),
+            '}' => self.add_token(TokenKind::RightBrace),
+            ',' => self.add_token(TokenKind::Comma),
+            ':' => self.add_token(TokenKind::Colon),
             '?' => {
                 let token_type = if (&mut *self).then('?') {
-                    TokenType::QuestionQuestion
+                    TokenKind::QuestionQuestion
                 } else if (&mut *self).then('=') {
-                    TokenType::QuestionEqual
-                } else { TokenType::Question };
+                    TokenKind::QuestionEqual
+                } else { TokenKind::Question };
                 (&mut *self).add_token(token_type);
             }
             '.' => {
                 let token_type = if self.then('.') {
-                    TokenType::DotDot
-                } else { TokenType::Dot };
+                    TokenKind::DotDot
+                } else { TokenKind::Dot };
                 self.add_token(token_type);
             }
             '-' => {
                 let token_type = if self.then('=') {
-                    TokenType::MinusEqual
-                } else { TokenType::Minus };
+                    TokenKind::MinusEqual
+                } else { TokenKind::Minus };
                 self.add_token(token_type);
             }
             '+' => {
                 let token_type = if self.then('=') {
-                    TokenType::PlusEqual
-                } else { TokenType::Plus };
+                    TokenKind::PlusEqual
+                } else { TokenKind::Plus };
                 self.add_token(token_type);
             }
             '*' => {
                 let token_type = if self.then('=') {
-                    TokenType::StarEqual
-                } else { TokenType::Star };
+                    TokenKind::StarEqual
+                } else { TokenKind::Star };
                 self.add_token(token_type);
             }
             '=' => {
                 let token_type = if (&mut *self).then('=') {
-                    TokenType::EqualEqual
+                    TokenKind::EqualEqual
                 } else if (&mut *self).then('>') {
-                    TokenType::FatArrow
-                } else { TokenType::Equal };
+                    TokenKind::FatArrow
+                } else { TokenKind::Equal };
                 self.add_token(token_type);
             }
             '>' => {
                 let token_type = if self.then('=') {
-                    TokenType::GreaterEqual
-                } else { TokenType::Greater };
+                    TokenKind::GreaterEqual
+                } else { TokenKind::Greater };
                 self.add_token(token_type);
             }
             '<' => {
                 let token_type = if self.then('=') {
-                    TokenType::LessEqual
-                } else { TokenType::Less };
+                    TokenKind::LessEqual
+                } else { TokenKind::Less };
                 self.add_token(token_type);
             }
             '!' => {
                 let token_type = if (&mut *self).then('=') {
-                    TokenType::ExclamationEqual
-                } else { TokenType::Exclamation };
+                    TokenKind::ExclamationEqual
+                } else { TokenKind::Exclamation };
                 (&mut *self).add_token(token_type);
             }
             '/' => {
@@ -142,16 +144,30 @@ impl<'a> Scanner<'a> {
                         self.proceed();
                     }
                 } else if self.then('=') {
-                    self.add_token(TokenType::SlashEqual)
+                    self.add_token(TokenKind::SlashEqual)
                 } else {
-                    self.add_token(TokenType::Slash)
+                    self.add_token(TokenKind::Slash)
                 }
             }
             '"' => self.string(),
             '0'..='9' => self.number(),
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             ' ' | '\r' | '\t' => { /* Ignore whitespace characters */ }
-            '\n' => self.line += 1,
+            '\n' => {
+                self.line += 1;
+
+                match self.prev_token_type {
+                    Some(TokenKind::Identifier) |
+                    Some(TokenKind::Number) |
+                    Some(TokenKind::String) |
+                    Some(TokenKind::RightParen) |
+                    Some(TokenKind::RightBrace) |
+                    Some(TokenKind::RightBracket) => {
+                        self.add_token(TokenKind::NewLine)
+                    },
+                    _ => { }
+                }
+            },
             _ => Proxyz::error_at_line(self.line, "Unexpected character."),
         }
     }
@@ -162,7 +178,7 @@ impl<'a> Scanner<'a> {
         }
 
         let text = &self.source[self.start..self.position];
-        let token_type = parse_keyword(text).unwrap_or(TokenType::Identifier);
+        let token_type = parse_keyword(text).unwrap_or(TokenKind::Identifier);
 
         self.add_token(token_type);
     }
@@ -183,7 +199,7 @@ impl<'a> Scanner<'a> {
         self.proceed();
         let raw_string = &self.source[self.start + 1..self.position];
 
-        self.add_token_with_literal(TokenType::String, Literal::String(raw_string));
+        self.add_token_with_literal(TokenKind::String, Literal::String(raw_string));
     }
 
     fn number(&mut self) {
@@ -202,7 +218,7 @@ impl<'a> Scanner<'a> {
         }
 
         self.add_token_with_literal(
-            TokenType::Number,
+            TokenKind::Number,
             Literal::Number(self.source[self.start..self.position].parse().unwrap()),
         );
     }
@@ -245,13 +261,14 @@ impl<'a> Scanner<'a> {
         self.source.chars().nth(self.position - 1).unwrap()
     }
 
-    fn add_token(&mut self, variant: TokenType) {
-        self.add_token_with_literal(variant, Literal::None);
+    fn add_token(&mut self, kind: TokenKind) {
+        self.prev_token_type = Some(kind);
+        self.add_token_with_literal(kind, Literal::None);
     }
 
-    fn add_token_with_literal(&mut self, variant: TokenType, literal: Literal<'a>) {
+    fn add_token_with_literal(&mut self, kind: TokenKind, literal: Literal<'a>) {
         let text: &'a str = &self.source[self.start..self.position];
         self.tokens
-            .push(Token::new(variant, text, self.line, literal));
+            .push(Token::new(kind, text, self.line, literal));
     }
 }

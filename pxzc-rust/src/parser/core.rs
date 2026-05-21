@@ -1,6 +1,6 @@
 use std::ops::Index;
 use crate::proxyz::Proxyz;
-use crate::lexer::{Token, TokenType};
+use crate::lexer::{Token, TokenKind};
 use crate::parser::expr::Expr;
 
 pub struct Parser<'a> {
@@ -16,12 +16,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse(&mut self) -> Option<Box<Expr<'a>>> {
+        match self.expression() {
+            Ok(expr) => Some(expr),
+            Err(ParseError) => None
+        }
+    }
+
     fn expression(&mut self) -> ParseResult<Box<Expr<'a>>> { self.equality() }
 
     fn equality(&mut self) -> ParseResult<Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.comparison()?;
 
-        while self.match_one(&[TokenType::ExclamationEqual, TokenType::EqualEqual]) {
+        while self.match_one(&[TokenKind::ExclamationEqual, TokenKind::EqualEqual]) {
             let operator_idx = self.previous_index();
             let right: Box<Expr<'a>> = self.comparison()?;
             let operator: &'a Token<'a> = &self.tokens[operator_idx];
@@ -39,10 +46,10 @@ impl<'a> Parser<'a> {
         let mut expr: Box<Expr<'a>> = self.term()?;
 
         while self.match_one(&[
-            TokenType::Greater,
-            TokenType::GreaterEqual,
-            TokenType::Less,
-            TokenType::LessEqual
+            TokenKind::Greater,
+            TokenKind::GreaterEqual,
+            TokenKind::Less,
+            TokenKind::LessEqual
         ]) {
             let operator_idx: usize = self.previous_index();
             let right: Box<Expr<'a>> = self.factor()?;
@@ -58,7 +65,7 @@ impl<'a> Parser<'a> {
     }
 
     fn unary(&mut self) -> ParseResult<Box<Expr<'a>>> {
-        if self.match_one(&[TokenType::Minus, TokenType::Exclamation]) {
+        if self.match_one(&[TokenKind::Minus, TokenKind::Exclamation]) {
             let operator_idx: usize = self.previous_index();
             let right: Box<Expr<'a>> = self.unary()?;
             let operator: &'a Token<'a> = &self.tokens[operator_idx];
@@ -73,20 +80,19 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> ParseResult<Box<Expr<'a>>>{
         if self.match_one(&[
-            TokenType::False,
-            TokenType::True,
-            TokenType::Null,
-            TokenType::Number,
-            TokenType::String
+            TokenKind::False,
+            TokenKind::True,
+            TokenKind::Null,
+            TokenKind::Number,
+            TokenKind::String
         ]) {
             let prev_idx: usize = self.previous_index();
             return Ok(Box::new(Expr::Literal { value: &self.tokens[prev_idx].literal }))
-            // return Ok(Box::new(Expr::Literal { value: &self.previous().literal }))
         }
 
-        if self.match_one(&[TokenType::LeftParen]) {
+        if self.match_one(&[TokenKind::LeftParen]) {
             let expression: Box<Expr> = self.expression()?;
-            self.consume(TokenType::RightParen, "Expected ')' after expression.")?;
+            self.consume(TokenKind::RightParen, "Expected ')' after expression.")?;
             return Ok(Box::new(Expr::Grouped { expression }))
         }
 
@@ -98,8 +104,8 @@ impl<'a> Parser<'a> {
         let mut expr: Box<Expr<'a>>= self.factor()?;
 
         while self.match_one(&[
-            TokenType::Minus,
-            TokenType::Plus
+            TokenKind::Minus,
+            TokenKind::Plus
         ]) {
             let operator_idx: usize = self.previous_index();
             let right: Box<Expr<'a>> = self.factor()?;
@@ -118,7 +124,7 @@ impl<'a> Parser<'a> {
     fn factor(&mut self) -> ParseResult<Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.unary()?;
 
-        while self.match_one(&[TokenType::Slash, TokenType::Star]) {
+        while self.match_one(&[TokenKind::Slash, TokenKind::Star]) {
             let operator_idx: usize = self.previous_index();
             let right: Box<Expr> = self.unary()?;
             let operator: &Token = &self.tokens[operator_idx];
@@ -133,7 +139,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    fn match_one(&mut self, types: &[TokenType]) -> bool {
+    fn match_one(&mut self, types: &[TokenKind]) -> bool {
         for token_type in types {
             if self.check_if_type(&token_type) {
                 self.advance();
@@ -144,7 +150,7 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn consume(&mut self, token_type: TokenType, message: &str) -> ParseResult<&'a Token<'a>>{
+    fn consume(&mut self, token_type: TokenKind, message: &str) -> ParseResult<&'a Token<'a>>{
         if self.check_if_type(&token_type) {
             return Ok(self.advance());
         }
@@ -153,9 +159,9 @@ impl<'a> Parser<'a> {
         Err(ParseError)
     }
 
-    fn check_if_type(&self, variant: &TokenType) -> bool {
+    fn check_if_type(&self, kind: &TokenKind) -> bool {
         if self.is_at_end() { return false; }
-        self.peek().variant == *variant
+        self.peek().kind == *kind
     }
 
     fn advance(&mut self) -> &'a Token<'a> {
@@ -163,7 +169,7 @@ impl<'a> Parser<'a> {
         self.previous()
     }
 
-    fn is_at_end(&self) -> bool { self.peek().variant == TokenType::Eof }
+    fn is_at_end(&self) -> bool { self.peek().kind == TokenKind::Eof }
 
     fn peek(&self) -> &'a Token<'a> { self.tokens.index(self.current) }
 
@@ -174,6 +180,34 @@ impl<'a> Parser<'a> {
     fn error(&self, token: &Token, message: &str) -> ParseResult<()> {
         Proxyz::error_at_token(token, message);
         Err(ParseError)
+    }
+
+    fn synchronise(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().kind == TokenKind::NewLine {
+                return;
+            }
+
+            match self.peek().kind {
+                TokenKind::Struct |
+                TokenKind::Proc |
+                TokenKind::Val |
+                TokenKind::Var |
+                TokenKind::For |
+                TokenKind::If |
+                TokenKind::While |
+                TokenKind::Return |
+                TokenKind::Unsafe |
+                TokenKind::Module |
+                TokenKind::Import |
+                TokenKind::Export => return,
+                _ => { }
+            }
+
+            self.advance();
+        }
     }
 }
 

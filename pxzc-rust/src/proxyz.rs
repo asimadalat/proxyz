@@ -1,7 +1,9 @@
 use std::fs;
 use std::io;
 use std::process;
-use crate::lexer::{Scanner, Token, TokenType};
+use crate::lexer::{Scanner, Token, TokenKind};
+use crate::parser;
+use crate::parser::core::Parser;
 
 static HAD_ERROR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
@@ -54,17 +56,20 @@ impl Proxyz {
         let mut scanner = Scanner::new(source);
         let tokens: &Vec<Token> = scanner.scan_tokens();
 
-        for token in tokens {
-            println!("{:?}\n", *token);
-        }
+        let mut parser = Parser::new(tokens);
 
-        println!("{}", source);
+        match parser.parse() {
+            Some(expression) => {
+                println!("{}", parser::ast_printer::print(&expression));
+            }
+            None => { }
+        }
     }
 
     pub fn error_at_line(line: u32, message: &str) { Self::report_error(line, "", message) }
 
     pub fn error_at_token(token: &Token, message: &str) {
-        if token.variant == TokenType::Eof {
+        if token.kind == TokenKind::Eof {
             Self::report_error(token.line, " at end", message);
         } else {
             Self::report_error(token.line, &format!(" at '{}'", token.lexeme), message);

@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TokenType {
+pub enum TokenKind {
     // Literals
     Number,
     String,
@@ -48,8 +48,8 @@ pub enum TokenType {
     FatArrow, // =>
 
     //  Reserved Keywords
-    Let,
-    Final,
+    Val,
+    Var,
     Struct,
     Proc,
     As,
@@ -70,5 +70,6 @@ pub enum TokenType {
     Import,
     Export,
 
+    NewLine,
     Eof,
 }

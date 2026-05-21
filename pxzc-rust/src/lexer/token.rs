@@ -1,19 +1,19 @@
 use std::fmt;
 use std::fmt::Formatter;
-use crate::lexer::{TokenType, Literal};
+use crate::lexer::{TokenKind, Literal};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub struct Token<'a> {
-    pub(crate) variant: TokenType,
+    pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
     pub(crate) literal: Literal<'a>,
     pub(crate) line: u32,
 }
 
 impl<'a> Token<'a> {
-    pub fn new(variant: TokenType, lexeme: &'a str, line: u32, literal: Literal<'a>) -> Self {
+    pub fn new(kind: TokenKind, lexeme: &'a str, line: u32, literal: Literal<'a>) -> Self {
         Token {
-            variant,
+            kind,
             lexeme,
             line,
             literal,
