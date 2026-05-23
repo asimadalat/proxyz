@@ -51,7 +51,7 @@ pub enum TokenKind {
     Val,
     Var,
     Struct,
-    Proc,
+    Fn,
     As,
     Is,
 

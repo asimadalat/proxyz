@@ -190,7 +190,7 @@ impl<'a> Parser<'a> {
 
             match self.peek().kind {
                 TokenKind::Struct |
-                TokenKind::Proc |
+                TokenKind::Fn |
                 TokenKind::Val |
                 TokenKind::Var |
                 TokenKind::For |
