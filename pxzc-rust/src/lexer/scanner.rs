@@ -9,6 +9,7 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "null" => TokenKind::Null,
     "val" => TokenKind::Val,
     "var" => TokenKind::Var,
+    "log" => TokenKind::Log,
     "struct" => TokenKind::Struct,
     "fn" => TokenKind::Fn,
     "as" => TokenKind::As,
@@ -205,7 +206,7 @@ impl<'a> Scanner<'a> {
         }
 
         self.proceed();
-        let raw_string = &self.source[self.start + 1..self.position];
+        let raw_string = &self.source[self.start + 1..self.position - 1];
 
         self.add_token_with_literal(TokenKind::String, Literal::String(raw_string));
 

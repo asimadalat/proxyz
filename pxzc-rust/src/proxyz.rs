@@ -1,17 +1,22 @@
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::process;
+use crate::interpreter::core::Interpreter;
 use crate::lexer::{Scanner, Token, TokenKind};
-use crate::parser;
 use crate::parser::core::Parser;
 
 pub struct Proxyz {
+    interpreter: Interpreter,
     had_error: bool,
 }
 
 impl Proxyz {
     pub fn new() -> Proxyz {
-        Proxyz { had_error: false }
+        Proxyz {
+            interpreter: Interpreter::new(),
+            had_error: false
+        }
     }
 
     pub fn execute(&mut self, args: Vec<String>) {
@@ -43,6 +48,8 @@ impl Proxyz {
         let mut buffer = String::new();
         loop {
             print!("> ");
+            io::stdout().flush().unwrap();
+
             let line = input.read_line(&mut buffer);
             match line {
                 Ok(0) => break,
@@ -65,7 +72,17 @@ impl Proxyz {
 
                 match parser.parse() {
                     Ok(ast) => {
-                        println!("{}", parser::ast_printer::print(&ast));
+                        match self.interpreter.interpret(&ast) {
+                            Ok(_) => {}
+                            Err(runtime_error) => {
+                                self.error_at_token(
+                                    runtime_error.token,
+                                    runtime_error.message
+                                )
+                            }
+                        }
+
+                        // println!("{}", parser::ast_printer::print(&ast));
                     }
                     Err(parse_error) => { 
                         self.error_at_token(

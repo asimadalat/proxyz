@@ -3,6 +3,7 @@ use std::ops::Index;
 use crate::errors::{ParseError, ParseResult};
 use crate::lexer::{Token, TokenKind};
 use crate::parser::expr::Expr;
+use crate::parser::stmt::Stmt;
 
 pub struct Parser<'a> {
     tokens: &'a [Token<'a>],
@@ -17,11 +18,42 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
-        self.expression()
+    pub fn parse(&mut self) -> ParseResult<'a, Vec<Stmt<'a>>> {
+        let mut statements: Vec<Stmt<'a>> = Vec::new();
+        while !self.is_at_end() {
+            statements.push(self.statement()?);
+        }
+
+        Ok(statements)
     }
 
     fn expression(&mut self) -> ParseResult<'a, Box<Expr<'a>>> { self.equality() }
+
+    fn statement(&mut self) -> ParseResult<'a, Stmt<'a>> {
+        if self.match_one(&[TokenKind::Log]) {
+            return Ok(self.log_statement()?);
+        }
+
+        Ok(self.expression_statement()?)
+    }
+
+    fn log_statement(&mut self) -> ParseResult<'a,Stmt<'a>> {
+        let value: Box<Expr> = self.expression()?;
+        self.consume_terminator(
+            "Expected newline after value."
+        )?;
+
+        Ok(Stmt::Log(value))
+    }
+
+    fn expression_statement(&mut self) -> ParseResult<'a, Stmt<'a>> {
+        let expr: Box<Expr> = self.expression()?;
+        self.consume_terminator(
+            "Expected newline after expression."
+        )?;
+
+        Ok(Stmt::Expression(expr))
+    }
 
     fn equality(&mut self) -> ParseResult<'a, Box<Expr<'a>>> {
         let mut expr: Box<Expr<'a>> = self.comparison()?;
@@ -158,6 +190,22 @@ impl<'a> Parser<'a> {
         Err(Self::error(self.peek(), message))
     }
 
+    fn consume_terminator(&mut self, error_message: &'static str) -> ParseResult<'a, ()> {
+        if self.is_at_end() {
+            if self.check_if_type(&TokenKind::Eof) {
+                self.advance();
+            }
+            return Ok(());
+        }
+
+        if self.check_if_type(&TokenKind::NewLine) {
+            self.advance();
+            return Ok(());
+        }
+
+        Err(Self::error(self.peek(), error_message))
+    }
+
     fn check_if_type(&self, kind: &TokenKind) -> bool {
         if self.is_at_end() { return false; }
         self.peek().kind == *kind
@@ -193,6 +241,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Fn |
                 TokenKind::Val |
                 TokenKind::Var |
+                TokenKind::Log |
                 TokenKind::For |
                 TokenKind::If |
                 TokenKind::While |

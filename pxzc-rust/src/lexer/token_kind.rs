@@ -50,6 +50,7 @@ pub enum TokenKind {
     //  Reserved Keywords
     Val,
     Var,
+    Log,
     Struct,
     Fn,
     As,

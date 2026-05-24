@@ -2,6 +2,7 @@ mod lexer;
 mod proxyz;
 mod parser;
 mod errors;
+mod interpreter;
 
 use std::env;
 
