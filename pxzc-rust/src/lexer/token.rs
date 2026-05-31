@@ -2,8 +2,8 @@ use std::fmt;
 use std::fmt::Formatter;
 use crate::lexer::{TokenKind, Literal};
 
-#[derive(Debug, PartialEq)]
-pub struct Token<'a> {
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) struct Token<'a> {
     pub(crate) kind: TokenKind,
     pub(crate) lexeme: &'a str,
     pub(crate) literal: Literal<'a>,
@@ -11,7 +11,7 @@ pub struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    pub fn new(kind: TokenKind, lexeme: &'a str, line: u32, literal: Literal<'a>) -> Self {
+    pub(crate) fn new(kind: TokenKind, lexeme: &'a str, line: u32, literal: Literal<'a>) -> Self {
         Token {
             kind,
             lexeme,
@@ -19,8 +19,6 @@ impl<'a> Token<'a> {
             literal,
         }
     }
-
-    pub fn lexeme(&self) -> &'a str { self.lexeme }
 }
 
 impl<'a> fmt::Display for Token<'a> {

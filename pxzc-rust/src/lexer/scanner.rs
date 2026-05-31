@@ -28,11 +28,11 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "export" => TokenKind::Export
 };
 
-pub fn parse_keyword(keyword: &str) -> Option<TokenKind> {
+pub(crate) fn parse_keyword(keyword: &str) -> Option<TokenKind> {
     KEYWORDS.get(keyword).cloned()
 }
 
-pub struct Scanner<'a> {
+pub(crate) struct Scanner<'a> {
     tokens: Vec<Token<'a>>,
     start: usize,
     position: usize,
@@ -42,7 +42,7 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn new(source: &'_ str) -> Scanner<'_> {
+    pub(crate) fn new(source: &'_ str) -> Scanner<'_> {
         Scanner {
             tokens: Vec::new(),
             start: 0,

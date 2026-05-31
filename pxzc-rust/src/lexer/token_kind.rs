@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     // Literals
     Number,
     String,

@@ -1,4 +1,4 @@
-pub mod expr;
-pub mod ast_printer;
-pub mod core;
-pub mod stmt;
+pub(crate) mod expr;
+pub(crate) mod ast_printer;
+pub(crate) mod core;
+pub(crate) mod stmt;

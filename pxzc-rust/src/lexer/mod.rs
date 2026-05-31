@@ -1,9 +1,9 @@
-pub mod token_kind;
-pub mod scanner;
-pub mod literal;
-pub mod token;
+pub(crate) mod token_kind;
+pub(crate) mod scanner;
+pub(crate) mod literal;
+pub(crate) mod token;
 
-pub use token_kind::TokenKind;
-pub use scanner::Scanner;
-pub use literal::Literal;
-pub use token::Token;
+pub(crate) use token_kind::TokenKind;
+pub(crate) use scanner::Scanner;
+pub(crate) use literal::Literal;
+pub(crate) use token::Token;

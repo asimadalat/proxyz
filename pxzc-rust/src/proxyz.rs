@@ -1,69 +1,40 @@
-use std::fs;
-use std::io;
 use std::io::Write;
-use std::process;
+
 use crate::interpreter::core::Interpreter;
 use crate::lexer::{Scanner, Token, TokenKind};
 use crate::parser::core::Parser;
 
-pub struct Proxyz {
-    interpreter: Interpreter,
-    had_error: bool,
+pub(crate) struct Proxyz<'a> {
+    interpreter: Interpreter<'a>,
+    pub(crate) had_error: bool,
 }
 
-impl Proxyz {
-    pub fn new() -> Proxyz {
+impl<'a> Proxyz<'a> {
+    pub(crate) fn new() -> Proxyz<'a> {
         Proxyz {
             interpreter: Interpreter::new(),
             had_error: false
         }
     }
 
-    pub fn execute(&mut self, args: Vec<String>) {
-        let num_args: u8 = args.len() as u8;
+    pub(crate) fn run_prompt(&mut self) {
+        let input = std::io::stdin();
 
-        if num_args > 2 {
-            println!("Usage: pxzc [script]");
-            process::exit(1);
-        } else if num_args == 2 {
-            self.run_file(&args[1]).expect("Could not run Proxyz script");
-        } else {
-            self.run_prompt();
-        }
-    }
-
-    fn run_file(&mut self, path: &String) -> io::Result<()> {
-        let s = fs::read_to_string(&path)?;
-
-        self.run(&s);
-        if self.had_error {
-            process::exit(1)
-        }
-
-        Ok(())
-    }
-
-    fn run_prompt(&mut self) {
-        let input = io::stdin();
-        let mut buffer = String::new();
         loop {
             print!("> ");
-            io::stdout().flush().unwrap();
+            std::io::stdout().flush().unwrap();
 
-            let line = input.read_line(&mut buffer);
-            match line {
-                Ok(0) => break,
-                Ok(_) => {
-                    self.run(&buffer);
-                    buffer.clear();
-                    self.had_error = true;
-                }
-                Err(ex) => eprintln!("error: {ex}"),
+            let mut buffer = String::new();
+            if input.read_line(&mut buffer).is_err() || buffer.trim() == "exit" {
+                break;
             }
+
+            let line_static: &'static str = Box::leak(buffer.into_boxed_str());
+            self.run(line_static);
         }
     }
 
-    fn run(&mut self, source: &str) {
+    pub(crate) fn run(&mut self, source: &'a str) {
         let mut scanner = Scanner::new(source);
 
         match scanner.scan_tokens() {
@@ -72,12 +43,12 @@ impl Proxyz {
 
                 match parser.parse() {
                     Ok(ast) => {
-                        match self.interpreter.interpret(&ast) {
+                        match self.interpreter.interpret(ast) {
                             Ok(_) => {}
                             Err(runtime_error) => {
                                 self.error_at_token(
-                                    runtime_error.token,
-                                    runtime_error.message
+                                    &runtime_error.token,
+                                    &*runtime_error.message
                                 )
                             }
                         }
