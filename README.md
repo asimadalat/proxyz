@@ -10,7 +10,7 @@ The current implementation (`pxzc-rust`) is the reference frontend pipeline, wri
 
 The compiler frontend is organized strictly by execution phases rather than enterprise layers. This minimizes pointer indirection and ensures a unidirectional data flow.
 
-`
+```
 [ Raw Source String ] 
           │
           ▼  (Lexical Analysis Pass)
@@ -21,11 +21,11 @@ The compiler frontend is organized strictly by execution phases rather than ente
           │
           ▼  (Runtime Execution Pass)
    Interpreter::new() ───► Evaluates Statements & Manages State via Environment
-`
+```
 
 ## Repository Layout
 
-`
+```
 pxzc-rust [pxzc]
 ├── Cargo.toml
 └── src/
@@ -48,7 +48,7 @@ pxzc-rust [pxzc]
         ├── core.rs
         ├── expr.rs
         └── stmt.rs
-`
+```
 
 ## Current Progress
 - [x] Project Architecture & Repository Setup
