@@ -69,11 +69,11 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### Installation
 
-Clone the repository and move into the project directory:
+Clone the repository and move into the Rust compiler subdirectory within the project parent directory:
 
 ```
 git clone https://github.com/asimadalat/proxyz.git
-cd proxyz
+cd proxyz/pxzc-rust
 ```
 
 ### Running the Interactive REPL
