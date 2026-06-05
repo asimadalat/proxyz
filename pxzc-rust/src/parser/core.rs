@@ -42,7 +42,7 @@ impl<'tokens, 'a> Parser<'tokens, 'a> {
         }
     }
 
-    fn expression(&mut self) -> ParseResult<'tokens, 'a, Box<Expr<'a>>> { self.equality() }
+    fn expression(&mut self) -> ParseResult<'tokens, 'a, Box<Expr<'a>>> { self.assignment() }
 
     fn statement(&mut self) -> ParseResult<'tokens, 'a, Stmt<'a>> {
         if self.match_one(&[TokenKind::Log]) {
@@ -89,6 +89,26 @@ impl<'tokens, 'a> Parser<'tokens, 'a> {
         )?;
 
         Ok(Stmt::Var(name, initialiser))
+    }
+    
+    fn assignment(&mut self) -> ParseResult<'tokens, 'a, Box<Expr<'a>>> {
+        let expression = self.equality()?;
+
+        if self.match_one(&[TokenKind::Equal]) {
+            let equals_idx = self.previous_index();
+            let value = self.assignment()?;
+
+            if let Expr::Variable { name } = *expression {
+                return Ok(Box::new(Expr::Assign { name, value }));
+            }
+
+            return Err(Self::error(
+                &self.tokens[equals_idx],
+                "Invalid assignment target.",
+            ));
+        }
+        
+        Ok(expression)
     }
 
     fn equality(&mut self) -> ParseResult<'tokens, 'a, Box<Expr<'a>>> {

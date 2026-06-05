@@ -18,5 +18,9 @@ pub enum Expr<'a> {
     },
     Variable {
         name: Token<'a>
+    },
+    Assign {
+        name: Token<'a>,
+        value: Box<Expr<'a>>
     }
 }

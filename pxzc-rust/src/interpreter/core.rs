@@ -125,6 +125,11 @@ impl<'a> Interpreter<'a> {
                 }
             }
             Expr::Variable { name } => { self.env.get(name) }
+            Expr::Assign { name, value } => {
+                let value = self.evaluate(*value)?;
+                self.env.assign(name, value)?;
+                Ok(value)
+            }
         }
     }
 

@@ -27,4 +27,20 @@ impl<'a> Environment<'a> {
             ))
         }
     }
+
+    pub(crate) fn assign(
+        &mut self,
+        name: Token<'a>,
+        value: RuntimeValue<'a>
+    ) -> RuntimeResult<'a, ()> {
+        if let Some(current) = self.variables.get_mut(name.lexeme) {
+            *current = value;
+            return Ok(());
+        }
+
+        Err(RuntimeError::new_owned(
+            name,
+            format!("Attempted to reassign undefined variable, {}.", name.lexeme)
+        ))
+    }
 }
